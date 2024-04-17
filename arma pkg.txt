@@ -1,0 +1,216 @@
+  create or replace PACKAGE ARMA_BD_PKG AS
+  FUNCTION Arma_Package(pNombreTabla in varchar2, pColumnasID in varchar2) RETURN CLOB;
+  --
+  FUNCTION Arma_Definicion(pNombreTabla in varchar2, pColumnasID in varchar2) RETURN CLOB;
+  --
+  FUNCTION Arma_Body(pNombreTabla in varchar2, pColumnasID in varchar2) RETURN CLOB;
+  --
+END ARMA_BD_PKG;
+
+create or replace PACKAGE BODY ARMA_BD_PKG AS
+--
+
+FUNCTION Arma_Package(pNombreTabla in varchar2, pColumnasID in varchar2) RETURN CLOB
+IS
+    l_return clob;
+BEGIN
+
+    l_return := '';
+    l_return := l_return || Arma_Definicion(pNombreTabla, pColumnasID);
+    l_return := l_return || utl_tcp.crlf || utl_tcp.crlf;
+    l_return := l_return || Arma_Body(pNombreTabla, pColumnasID);
+    
+    RETURN l_return;
+
+exception
+when others then
+ return sqlerrm;
+END Arma_Package;
+
+--
+
+FUNCTION Arma_Definicion(pNombreTabla in varchar2, pColumnasID in varchar2) RETURN CLOB
+IS
+
+    cursor cColumnasID(pTabla in varchar2, pIds in varchar2) is
+        select column_name, data_Type
+        from user_tab_columns
+        where table_name = pTabla
+        and instr(','||pIds||',', ','||column_name||',') > 0
+        order by column_id;
+
+    cursor cColumnas(pTabla in varchar2, pIds in varchar2) is
+        select column_name, data_Type
+        from user_tab_columns
+        where table_name = pTabla
+        and column_name not in ('FECHA_CREACION', 'USUARIO_CREACION', 'FECHA_EDICION', 'USUARIO_EDICION', 'USUARIO_MODIF', 'FECHA_MODIF')
+        and instr(','||pIds||',', ','||column_name||',') = 0
+        order by column_id;
+
+    
+    l_package varchar2(50);
+    l_codigo varchar2(32000);
+    l_completo clob;
+    
+BEGIN
+
+    l_package := replace(upper(pNombreTabla), 'TAB', 'PKG');
+    
+    l_completo := 'CREATE OR REPLACE PACKAGE ' || l_package || ' AS' || utl_tcp.crlf || '--' || utl_tcp.crlf;
+    
+    for col in cColumnas(upper(pNombreTabla), upper(pColumnasID))
+    loop
+
+        l_codigo := 'FUNCTION Get_' || initcap(col.column_name) || ' (';
+        
+        for colid in cColumnasID(upper(pNombreTabla), upper(pColumnasID))
+        loop
+                l_codigo := l_codigo || ', ' || lower(colid.column_name) || '_ IN ' || colid.data_type;
+        end loop;
+        
+        l_codigo := l_codigo || ') RETURN ' || col.data_type || ';';
+        
+        l_completo := l_completo || l_codigo || utl_tcp.crlf || '--' || utl_tcp.crlf;
+        
+    end loop;
+    
+    --
+    
+    l_codigo := 'FUNCTION Get' || ' (';
+        
+    for colid in cColumnasID(upper(pNombreTabla), upper(pColumnasID))
+    loop
+            l_codigo := l_codigo || ', ' || lower(colid.column_name) || '_ IN ' || colid.data_type;
+    end loop;
+        
+    l_codigo := l_codigo || ') RETURN ' || upper(pNombreTabla) || '%rowtype;';
+        
+    l_completo := l_completo || l_codigo || utl_tcp.crlf || '--' || utl_tcp.crlf;
+    
+    l_completo := l_completo || 'END ' || l_package || ';' || utl_tcp.crlf || '/';
+
+    --
+    
+    return l_completo;
+
+END Arma_Definicion;
+
+--
+
+FUNCTION Arma_Body(pNombreTabla in varchar2, pColumnasID in varchar2) RETURN CLOB
+IS
+
+    cursor cColumnasID(pTabla in varchar2, pIds in varchar2) is
+        select column_name, data_Type
+        from user_tab_columns
+        where table_name = pTabla
+        and instr(','||pIds||',', ','||column_name||',') > 0
+        order by column_id;
+
+    cursor cColumnas(pTabla in varchar2, pIds in varchar2) is
+        select column_name, data_Type
+        from user_tab_columns
+        where table_name = pTabla
+        and column_name not in ('FECHA_CREACION', 'USUARIO_CREACION', 'FECHA_EDICION', 'USUARIO_EDICION', 'USUARIO_MODIF', 'FECHA_MODIF')
+        and instr(','||pIds||',', ','||column_name||',') = 0
+        order by column_id;
+
+    l_package varchar2(50);
+    l_codigo varchar2(32000);
+    l_completo clob;
+    
+BEGIN
+    
+    l_package := replace(upper(pNombreTabla), 'TAB', 'PKG');
+        
+    l_completo := 'CREATE OR REPLACE PACKAGE BODY ' || l_package || ' AS' || utl_tcp.crlf || '--' || utl_tcp.crlf;
+    
+    for col in cColumnas(upper(pNombreTabla), upper(pColumnasID))
+    loop
+
+        l_codigo := 'FUNCTION Get_' || initcap(col.column_name) || ' (';
+        
+        for colid in cColumnasID(upper(pNombreTabla), upper(pColumnasID))
+        loop
+                l_codigo := l_codigo || ', ' || lower(colid.column_name) || '_ IN ' || colid.data_type;
+        end loop;
+        
+        l_codigo := l_codigo || ') RETURN ' || col.data_type || utl_tcp.crlf;
+        l_codigo := l_codigo || 'IS ' || utl_tcp.crlf || utl_tcp.crlf;
+        l_codigo := l_codigo || chr(9) || 'temp_          ' || upper(pNombreTabla) || '.' || col.column_name || '%TYPE;' || utl_tcp.crlf || utl_tcp.crlf;
+        
+        l_codigo := l_codigo || chr(9) || 'CURSOR get_attr IS' || utl_tcp.crlf;
+        l_codigo := l_codigo || chr(9) || chr(9) || 'SELECT ' || col.column_name || utl_tcp.crlf;
+        l_codigo := l_codigo || chr(9) || chr(9) || 'FROM ' || pNombreTabla || utl_tcp.crlf;
+        l_codigo := l_codigo || chr(9) || chr(9) || '' || utl_tcp.crlf;
+        
+        for colid in cColumnasID(upper(pNombreTabla), upper(pColumnasID))
+        loop
+                l_codigo := l_codigo || chr(9) || chr(9) || 'AND ' || lower(colid.column_name) || ' = ' || lower(colid.column_name) || '_' || utl_tcp.crlf;
+        end loop;
+        
+        l_codigo := l_codigo || chr(9) || chr(9) || ';' || utl_tcp.crlf || utl_tcp.crlf;
+      
+      
+        l_codigo := l_codigo || 'BEGIN' || utl_tcp.crlf || utl_tcp.crlf;
+        
+        
+        l_codigo := l_codigo || chr(9) || 'OPEN get_attr;' || utl_tcp.crlf;
+        l_codigo := l_codigo || chr(9) || 'FETCH get_attr INTO temp_;' || utl_tcp.crlf;
+        l_codigo := l_codigo || chr(9) || 'CLOSE get_attr;' || utl_tcp.crlf;
+        l_codigo := l_codigo || chr(9) || 'RETURN temp_;' || utl_tcp.crlf || utl_tcp.crlf;
+    
+        l_codigo := l_codigo || 'END Get_' || initcap(col.column_name) || ';';
+        
+        l_completo := l_completo || l_codigo || utl_tcp.crlf || utl_tcp.crlf;
+
+    end loop;
+    
+    --
+    
+    l_codigo := 'FUNCTION Get' || ' (';
+        
+    for colid in cColumnasID(upper(pNombreTabla), upper(pColumnasID))
+    loop
+            l_codigo := l_codigo || ', ' || lower(colid.column_name) || '_ IN ' || colid.data_type;
+    end loop;
+        
+    l_codigo := l_codigo || ') RETURN ' || upper(pNombreTabla) || '%rowtype IS' || utl_tcp.crlf || utl_tcp.crlf;
+        
+    l_codigo := l_codigo || chr(9) || 'temp_          ' || upper(pNombreTabla) || '%ROWTYPE;' || utl_tcp.crlf || utl_tcp.crlf;
+        
+    l_codigo := l_codigo || chr(9) || 'CURSOR get_attr IS' || utl_tcp.crlf;
+    l_codigo := l_codigo || chr(9)||chr(9) || 'SELECT *' || utl_tcp.crlf;
+    l_codigo := l_codigo || chr(9)||chr(9) || 'FROM ' || upper(pNombreTabla) || utl_tcp.crlf;
+    l_codigo := l_codigo || chr(9)||chr(9) || '' || utl_tcp.crlf;
+        
+    for colid in cColumnasID(upper(pNombreTabla), upper(pColumnasID))
+    loop
+            l_codigo := l_codigo || chr(9)||chr(9) || 'AND ' || lower(colid.column_name) || ' = ' || lower(colid.column_name) || '_' || utl_tcp.crlf;
+    end loop;
+                                        
+    l_codigo := l_codigo || chr(9)||chr(9) || ';' || utl_tcp.crlf || utl_tcp.crlf;
+        
+    l_codigo := l_codigo || 'BEGIN' || utl_tcp.crlf || utl_tcp.crlf;
+        
+    l_codigo := l_codigo || chr(9) || 'OPEN get_attr;' || utl_tcp.crlf;
+    l_codigo := l_codigo || chr(9) || 'FETCH get_attr INTO temp_;' || utl_tcp.crlf;
+    l_codigo := l_codigo || chr(9) || 'CLOSE get_attr;' || utl_tcp.crlf;
+    l_codigo := l_codigo || chr(9) || 'RETURN temp_;' || utl_tcp.crlf || utl_tcp.crlf;
+      
+    l_codigo := l_codigo || 'END Get;';
+        
+    l_completo := l_completo || l_codigo || utl_tcp.crlf || utl_tcp.crlf;
+    
+    l_completo := l_completo || 'END ' || l_package || ';' || utl_tcp.crlf || '/';
+    
+    --
+    
+    return l_completo;
+
+END Arma_Body;
+
+
+
+END ARMA_TABLA_API;
+/
