@@ -1,0 +1,8 @@
+create or replace FUNCTION  "MY_HASH" (p_usuario in varchar2,p_clave in varchar2) return varchar2 is
+ l_clave varchar2(300);
+ l_salt varchar2(300) := 'ISYmHMtSrFmT2nEZUvEU2LS3jrV3i';
+ begin
+l_clave := utl_raw.cast_to_raw(dbms_obfuscation_toolkit.md5(input_string => p_clave || substr(l_salt,10,13) || p_usuario || substr(l_salt,4,10) ));
+return l_clave;
+ end;
+/
