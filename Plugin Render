@@ -1,0 +1,25 @@
+function render (   p_region in apex_plugin.t_region,
+                    p_plugin in apex_plugin.t_plugin,
+                    p_is_printer_friendly in boolean )
+        return apex_plugin.t_region_render_result is
+begin
+    sys.htp.p('<ul class="t-Cards t-Cards--sampleAppsFooter t-Cards--featured force-fa-lg t-Cards--displayIcons t-Cards--hideBody t-Cards--animColorFill">');
+    sys.htp.p('<li class="t-Cards-item">');
+    sys.htp.p('  <div class="t-Card">');
+    sys.htp.p('    <a href="https://www.linkedin.com/in/leonel-torreblanca-a05850169/" target="_blank" class="t-Card-wrap">');
+    sys.htp.p('      <div class="t-Card-icon"><span class="t-Icon fa fa-linkedin" style="color: #0077b5"></span></div>');
+    sys.htp.p('      <div class="t-Card-titleWrap"><h3 class="t-Card-title">LinkedIn</h3></div>');
+    sys.htp.p('    </a>');
+    sys.htp.p('  </div>');
+    sys.htp.p('</li>');
+    sys.htp.p('<li class="t-Cards-item">');
+    sys.htp.p('  <div class="t-Card">');
+    sys.htp.p('    <a href="https://github.com/leoneltorreblancaDevs" target="_blank" class="t-Card-wrap">');
+    sys.htp.p('      <div class="t-Card-icon"><span class="t-Icon fa fa-brands fa-github" style="color: #3b5998"></span></div>');
+    sys.htp.p('      <div class="t-Card-titleWrap"><h3 class="t-Card-title">Github</h3></div>');
+    sys.htp.p('    </a>');
+    sys.htp.p('  </div>');
+    sys.htp.p('</li>');
+    sys.htp.p('</ul>');
+    return null;
+end render;
